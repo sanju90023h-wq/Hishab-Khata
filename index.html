@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আমার ব্যবসার হিসাব</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db"/>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="login-section" class="auth-section">
+            <h2>লগইন করুন</h2>
+            <input type="email" id="login-email" placeholder="ইমেল" value="your@example.com">
+            <input type="password" id="login-password" placeholder="পাসওয়ার্ড" value="your_password">
+            <button id="login-button">লগইন</button>
+            <p id="login-error" class="error-message"></p>
+            <p style="font-size: 0.8em; color: gray;">
+                (শুধুমাত্র আপনার ব্যবহারের জন্য। একবার লগইন করে থাকলে এটি আর দেখাবে না)
+            </p>
+        </div>
+
+        <!-- App Section (Hidden until logged in) -->
+        <div id="app-section" class="hidden">
+            <header>
+                <h1>আমার ব্যবসার হিসাব</h1>
+                <button id="logout-button" class="logout-btn">লগআউট</button>
+            </header>
+
+            <!-- Initial Balance Setup (Only shown once) -->
+            <div id="initial-balance-setup" class="card hidden">
+                <h2>প্রাথমিক ব্যালেন্স সেট করুন</h2>
+                <label for="initial-online">প্রাথমিক অনলাইন ব্যালেন্স:</label>
+                <input type="number" id="initial-online" placeholder="৳" value="0">
+                <label for="initial-cash">প্রাথমিক ক্যাশ ব্যালেন্স:</label>
+                <input type="number" id="initial-cash" placeholder="৳" value="0">
+                <button id="save-initial-balance">সেভ করুন</button>
+            </div>
+
+            <!-- Home/Dashboard Section -->
+            <div id="dashboard" class="section">
+                <h2>ড্যাশবোর্ড</h2>
+                <div class="summary-cards">
+                    <div class="card">
+                        <h3>বর্তমান অনলাইন</h3>
+                        <p id="current-online-balance">৳ 0.00</p>
+                    </div>
+                    <div class="card">
+                        <h3>বর্তমান ক্যাশ</h3>
+                        <p id="current-cash-balance">৳ 0.00</p>
+                    </div>
+                    <div class="card">
+                        <h3>আজকের আয়</h3>
+                        <p id="today-income">৳ 0.00</p>
+                    </div>
+                    <div class="card">
+                        <h3>আজকের ব্যয়</h3>
+                        <p id="today-expense">৳ 0.00</p>
+                    </div>
+                    <div class="card total-balance-card">
+                        <h3>মোট বর্তমান ব্যালেন্স</h3>
+                        <p id="total-current-balance">৳ 0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction Input Section -->
+            <div class="section transaction-input-section">
+                <h2 id="transaction-header">নতুন লেনদেন যোগ করুন</h2>
+                <select id="transaction-type">
+                    <option value="cash-income">ক্যাশ আয়</option>
+                    <option value="cash-expense">ক্যাশ ব্যয়</option>
+                    <option value="online-income">অনলাইন আয়</option>
+                    <option value="online-expense">অনলাইন ব্যয়</option>
+                    <option value="due-add">ডিউ যোগ করুন</option>
+                    <option value="due-collect-cash">ডিউ সংগ্রহ (ক্যাশ)</option>
+                    <option value="due-collect-online">ডিউ সংগ্রহ (অনলাইন)</option>
+                </select>
+
+                <div class="input-group">
+                    <label for="amount">পরিমাণ (৳)</label>
+                    <input type="number" id="amount" placeholder="৳" required>
+                </div>
+                
+                <div class="input-group" id="description-group">
+                    <label for="description">বর্ণনা (ঐচ্ছিক)</label>
+                    <input type="text" id="description" placeholder="যেমন: হেডফোন বিক্রি / রিচার্জ">
+                </div>
+
+                <div class="input-group hidden" id="customer-name-group">
+                    <label for="customer-name">কাস্টমারের নাম</label>
+                    <input type="text" id="customer-name" placeholder="কাস্টমারের নাম" >
+                </div>
+                
+                <button id="add-transaction-btn">যোগ করুন</button>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <nav class="bottom-nav">
+                <button class="nav-button active" data-target="dashboard">হোম</button>
+                <button class="nav-button" data-target="online-transactions">অনলাইন</button>
+                <button class="nav-button" data-target="cash-transactions">ক্যাশ</button>
+                <button class="nav-button" data-target="due-customers">ডিউ</button>
+            </nav>
+
+            <!-- Online Transactions Section -->
+            <div id="online-transactions" class="section hidden">
+                <h2>অনলাইন লেনদেন</h2>
+                <ul id="online-transaction-list" class="transaction-list"></ul>
+            </div>
+
+            <!-- Cash Transactions Section -->
+            <div id="cash-transactions" class="section hidden">
+                <h2>ক্যাশ লেনদেন</h2>
+                <ul id="cash-transaction-list" class="transaction-list"></ul>
+            </div>
+
+            <!-- Due Customers Section -->
+            <div id="due-customers" class="section hidden">
+                <h2>ডিউ কাস্টমার</h2>
+                <ul id="due-customer-list" class="customer-list"></ul>
+                <div id="customer-details-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <span class="close-button">&times;</span>
+                        <h3 id="modal-customer-name"></h3>
+                        <p>মোট পাওনা: <span id="modal-total-due"></span></p>
+                        <h4>লেনদেনের ইতিহাস</h4>
+                        <ul id="modal-transaction-history"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+  </html>
